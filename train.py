@@ -28,7 +28,7 @@ def train(batch_size, epochs):
     optimizer = Adam(params = filter(lambda x: x.requires_grad, model.parameters()), lr=1e-4,
                      betas=(0.9, 0.999),
                      weight_decay=0.1)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.1, verbose = True)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5, verbose = True)
 
     print('Training...')
 
@@ -175,7 +175,7 @@ def train(batch_size, epochs):
 
 if __name__ == '__main__':
 
-    model, loss = train(batch_size=16, epochs=15)
+    model, loss = train(batch_size=64, epochs=15)
     torch.save(model.state_dict(), 'models/pretrained_vgg16_BN_Bane_RELU')
 
     plt.figure(figsize=(12,12))
@@ -185,4 +185,3 @@ if __name__ == '__main__':
     plt.title('Loss function')
     plt.grid(True)
     plt.show()
-    print("wtf")

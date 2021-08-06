@@ -4,6 +4,8 @@ import torch
 import torch.utils.model_zoo as model_zoo
 import torch.nn.functional as F
 import torchvision.models as models
+from torchsummary import summary
+
 #from .model_utils import * #use . represent relative address
 #from utils.util_functions import unsqueeze_dim0_tensor
 
@@ -65,6 +67,7 @@ def predict_disp(in_planes):
 
 
 class DepthNet(nn.Module):
+    
     def __init__(self, datasets ='nyu'):
 
         super(DepthNet, self).__init__()
@@ -162,4 +165,5 @@ class DepthNet(nn.Module):
 
 if __name__ == '__main__':
     model = DepthNet().eval()
-    print(model(torch.rand(1,3,512,512)))
+    summary(model, (3, 284, 392))
+    #print(model(torch.rand(1,3,284,392)))

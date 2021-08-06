@@ -1,3 +1,4 @@
+from random import Random
 from models.vgg16bn_disp import DepthNet
 from copy import deepcopy
 import matplotlib.pyplot as plt
@@ -7,10 +8,11 @@ from time import time
 import torch
 from torch.optim import Adam
 from loss import loss_functions
-from preprocessing.data_transformations import get_split
+from preprocessing.data_transformations import denormalize, get_split, RandomHorizontalFlip, RandomVerticalFlip
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Available device is', device)
+
 
 def visualize_sample(model, dataset):
 
@@ -22,38 +24,16 @@ def visualize_sample(model, dataset):
 
     with torch.no_grad():
         # Prediction
-        pred = model(img)
-        depth = 1 / pred
+        disp = model(img)
+        depth = 1 / disp
 
-        '''
-        plt.figure(figsize=(12,12))
-        plt.hist(depth.cpu().numpy().flatten())
-        plt.title('Depth')
-        plt.show()
-
-        plt.figure(figsize=(12,12))
-        plt.hist(pred.cpu().numpy().flatten())
-        plt.title('Disparity')
-        plt.show()
-        '''
-
-
-        #print("Najmanji - najveci")
-        #print(torch.min(depth), torch.max(depth))
-
+        # Limit values
         depth = torch.clamp(depth, min=1e-3, max=10)
-
-        #print("Depth")
-        #print(depth)
-        #print("Gt depth")
-        #print(gt_depth)
         
         # Calculate loss
         loss_1 = loss_functions.l1_loss(gt_depth, depth)
         loss_3 = loss_functions.smooth_loss(depth)
         loss = 1*loss_1 + 1e-1*loss_3
-
-        print('Photometric loss {}, Smooth loss {}, Overall loss {}'.format(loss_1.item(), loss_3.item(), loss.item()))
 
     fig, axes = plt.subplots(ncols=3)
     ax = axes.ravel()
@@ -63,23 +43,14 @@ def visualize_sample(model, dataset):
     ax[1].imshow(gt_depth[0,:,:].cpu().numpy())
     ax[1].set_axis_off()
     ax[1].set_title('Ground truth depth')
-    ax[2].imshow(img[0,:,:,:].swapaxes(0,1).swapaxes(1,2).to(torch.uint8).cpu().numpy())
+    ax[2].imshow(denormalize(img)[0,:,:,:].swapaxes(0,1).swapaxes(1,2).to(torch.uint8).cpu().numpy())
     ax[2].set_axis_off()
     ax[2].set_title('Original image')
     plt.tight_layout()
     plt.show()
 
-    
-if __name__ == '__main__':
 
-    # Load pretrained network
-    model = DepthNet()
-    model.load_state_dict(torch.load('models/pretrained_vgg16_BN'))
-    model.to(device).eval()
-
-    # Get dataset
-    train_set, val_set, test_set = get_split()
-    
+def test(model, test_set):
     # Initialize running loss
     running_loss_photo = 0
     running_loss_smooth = 0
@@ -88,9 +59,10 @@ if __name__ == '__main__':
     # Evaluation on test dataset
     N_test = test_set.initBatch(batch_size=1)
 
-    """
+    # Iterate through test dataset
     for itr in range(N_test):
-        print('Iteration %d/%d' %(itr+1, N_test))
+        # Verbose
+        print('Iteration %d/%d' %(itr+1, N_test), end='\n')
 
         # Get images and depths
         # tgt_img, gt_depth = val_set.get_batch(batch_size=batch_size)
@@ -123,10 +95,30 @@ if __name__ == '__main__':
     print('################## Test results #####################')
     print('Photometric loss {}, Smooth loss {}, Overall loss {}'.format(running_loss_photo, running_loss_smooth, running_loss))
     print('-----------------------------------------------------')
+
+    
+if __name__ == '__main__':
+
+    # Load pretrained network
+    print('Loading model...')
+    model = DepthNet()
+    model.load_state_dict(torch.load('models/pretrained_vgg16_BN_Bane_RELU'))
+    model.to(device).eval()
+    print('Model loaded!')
+
+    # Load dataset
+    print('Loading data...')
+    train_set, val_set, test_set = get_split()
+    print('Data loaded!')
+    
+    """
+    # Test model
+    print('Testing a model...')
+    test(model=model, test_set=test_set)
+    print('Testing finished!')
     """
     
     # Visualization of results
     visualize_sample(model, train_set)
     visualize_sample(model, val_set)
     visualize_sample(model, test_set)
-

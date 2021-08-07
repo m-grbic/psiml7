@@ -7,13 +7,13 @@ import torch
 from loss.loss_functions import *
 import pathlib
 from preprocessing.data_transformations import denormalize, get_split, RandomHorizontalFlip, RandomVerticalFlip
+from hyperparameters import *
 
 # Device recognition
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Available device is', device)
 
 # Paths
-from hyperparameters import *
 model_path = 'models/' + MODEL_NAME
 images_dir = 'images/' + model_path.split('/')[-1]
 pathlib.Path(images_dir).mkdir(parents=True, exist_ok=True) 
@@ -22,13 +22,12 @@ pathlib.Path(images_dir).mkdir(parents=True, exist_ok=True)
 w1, w2 = W1, W2
 
 
-def visualize_sample(model, dataset, title, nsamples=3):
+def visualize_sample(model, img, gt_depth, loss, title, nsamples=3):
 
     fig, axes = plt.subplots(nrows=nsamples, ncols=3, dpi=120)
     ax = axes.ravel()
 
     for r in range(nsamples):
-        img, gt_depth = dataset.getSample()
 
         # To Cuda
         img = img.to(device).float()
@@ -40,27 +39,12 @@ def visualize_sample(model, dataset, title, nsamples=3):
             depth = 1 / disp
 
             # Limit values
-            depth = torch.clamp(depth, min=0, max=10)
+            depth = torch.clamp(depth, min=1e-3, max=10)
 
         # Conversion to numpy
         image_numpy = torch.squeeze(denormalize(img)).swapaxes(0,1).swapaxes(1,2).to(torch.uint8).cpu().numpy()
         gt_depth_numpy = torch.squeeze(gt_depth).detach().cpu().numpy()
         depth_numpy = torch.squeeze(depth).detach().cpu().numpy()
-
-        '''
-        # Depth histogram
-        gt_depth_hist = gt_depth_numpy.flatten()
-        depth_hist = depth_numpy.flatten()
-
-        
-        fig, axes = plt.subplots(ncols=2, figsize=(12,12))
-        ax = axes.ravel()
-        ax[0].hist(gt_depth_hist)
-        ax[1].hist(depth_hist)
-        ax[0].set_title('Ground truth depth histogram')
-        ax[1].set_title('Predicted depth histogram')
-        plt.show()
-        '''
 
         # Visualize
         ax[r*3].imshow(gt_depth_numpy)
@@ -73,10 +57,12 @@ def visualize_sample(model, dataset, title, nsamples=3):
         ax[r*3+2].set_axis_off()
         ax[r*3+2].set_title('Original image')
 
-    fig.suptitle(title)
+    fig.suptitle(title + ' (loss = {:.4f}'.format(loss) + ')')
     fig.savefig(images_dir + '/' + title + ' results.png', dpi=fig.dpi)
     plt.tight_layout()
-    plt.show()
+    #plt.show()
+
+    print("loss = ", loss.item())
 
 
 def test(model, test_set):
@@ -90,12 +76,15 @@ def test(model, test_set):
     N_test = test_set.initBatch(batch_size=1)
 
     # Iterate through test dataset
+    best_img, best_dpt, best_loss = None, None, None
+    worst_img, worst_dpt, worst_loss = None, None, None
+
     for itr in range(N_test):
         # Verbose
         print('Iteration %d/%d' %(itr+1, N_test))
 
         # Get images and depths
-        tgt_img, gt_depth = test_set.getBatch()
+        tgt_img, gt_depth = test_set.getSample(num=itr)
 
         # Move tensors to device
         tgt_img = tgt_img.to(device).float()
@@ -116,6 +105,11 @@ def test(model, test_set):
             running_loss_smooth += loss_3.item() / N_test
             running_loss += loss.item() / N_test
 
+            if best_loss == None or best_loss > loss:
+                best_img, best_dpt, best_loss = tgt_img, gt_depth, loss
+            if worst_loss == None or worst_loss < loss:
+                worst_img, worst_dpt, worst_loss = tgt_img, gt_depth, loss
+
             torch.cuda.empty_cache()
 
     # Print results on training dataset
@@ -123,6 +117,8 @@ def test(model, test_set):
     print('################ Test results ##################')
     print('Photometric loss {:.4f}, Smooth loss {:.4f}, Overall loss {:.4f}'.format(running_loss_photo, running_loss_smooth, running_loss))
     print('------------------------------------------------')
+
+    return worst_img, worst_dpt, worst_loss, best_img, best_dpt, best_loss
 
     
 if __name__ == '__main__':
@@ -140,13 +136,18 @@ if __name__ == '__main__':
     print('Data loaded!')
     
 
-    # Test model
-    print('Testing a model...')
-    test(model=model, test_set=test_set)
-    print('Testing finished!')
-    
+    # Choosing best sample
+    print('Choosing best sample in train dataset...')
+    worst_img, worst_dpt, worst_loss, best_img, best_dpt, best_loss = test(model=model, test_set=train_set)
+    visualize_sample(model, best_img, best_dpt, best_loss, 'Best training dataset', nsamples=1)
+    visualize_sample(model, worst_img, worst_dpt, worst_loss, 'Worst training dataset', nsamples=1)
 
-    # Visualization of results
-    visualize_sample(model, train_set, 'Training dataset')
-    visualize_sample(model, val_set, 'Validation dataset')
-    visualize_sample(model, test_set, 'Test dataset')
+    print('Choosing best sample in validation dataset...')
+    worst_img, worst_dpt, worst_loss, best_img, best_dpt, best_loss = test(model=model, test_set=val_set)
+    visualize_sample(model, best_img, best_dpt, best_loss, 'Best validation dataset', nsamples=1)
+    visualize_sample(model, worst_img, worst_dpt, worst_loss, 'Worst validation dataset', nsamples=1)
+
+    print('Choosing best sample in test dataset...')
+    worst_img, worst_dpt, worst_loss, best_img, best_dpt, best_loss = test(model=model, test_set=test_set)
+    visualize_sample(model, best_img, best_dpt, best_loss, 'Best test dataset', nsamples=1)
+    visualize_sample(model, worst_img, worst_dpt, worst_loss, 'Worst test dataset', nsamples=1)

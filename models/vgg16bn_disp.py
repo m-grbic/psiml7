@@ -72,7 +72,7 @@ class DepthNet(nn.Module):
 
         super(DepthNet, self).__init__()
 
-        self.only_train_decoder = True
+        self.only_train_decoder = False
 
         if datasets == 'nyu':
             self.alpha = 10
@@ -84,7 +84,7 @@ class DepthNet(nn.Module):
         self.features = models.vgg16_bn(pretrained=True)
         # Freeze parameters
         for param in self.features.parameters():
-            param.requires_grad = False
+            param.requires_grad = True
 
         # Create decoder
         self.upconv4 = ConvTranspose2dBlock(512, 256, 4, 2, 1, 0)
@@ -128,23 +128,23 @@ class DepthNet(nn.Module):
         skip3 = conv3
         skip4 = conv4
 
-        upconv4 = self.upconv4(conv5)  # H/16
+        upconv4 = self.upconv4(conv5)
         concat4 = torch.cat((upconv4, skip4), 1)
         iconv4  = self.iconv4(concat4)
 
-        upconv3 = self.upconv3(iconv4)  # H/8
+        upconv3 = self.upconv3(iconv4)
         concat3 = torch.cat((upconv3, skip3), 1)
         iconv3  = self.iconv3(concat3)
         disp3   = self.alpha * self.disp3(iconv3) + self.beta
         disp3up = upsample(disp3)
 
-        upconv2 = self.upconv2(iconv3)  # H/4
+        upconv2 = self.upconv2(iconv3)
         concat2 = torch.cat((upconv2, skip2, disp3up), 1)
         iconv2  = self.iconv2(concat2)
         disp2   = self.alpha * self.disp2(iconv2) + self.beta
         disp2up = upsample(disp2)
 
-        upconv1 = self.upconv1(iconv2)  # H/2
+        upconv1 = self.upconv1(iconv2)
         concat1 = torch.cat((upconv1, skip1, disp2up), 1)
         iconv1  = self.iconv1(concat1)
         disp1   = self.alpha * self.disp1(iconv1) + self.beta
@@ -155,11 +155,6 @@ class DepthNet(nn.Module):
         iconv0  = self.iconv0(concat0)
         disp0   = self.alpha * self.disp0(iconv0) + self.beta
 
-        '''
-        if self.training:
-            return disp0, disp1, disp2, disp3
-        else:
-        '''
         return disp0
 
 

@@ -1,13 +1,21 @@
 from __future__ import division
-import torch
 import warnings
 warnings.filterwarnings('ignore', '.*output shape of zoom.*')
 from time import time
+from hyperparameters import SMOOTH_L1, SMOOTH_THRESH
 
 
 def l1_loss(gt_depth, depth):
-    loss = (gt_depth - torch.squeeze(depth , 1)).abs().mean()
+    # Valid depth
+    valid = (gt_depth > 0) & (gt_depth < 10)
+    # L1 loss
+    loss = (gt_depth[valid] - depth[valid].clamp(min=0, max=10)).abs().mean()
+    # L2 loss
+    if SMOOTH_L1:
+        if loss < SMOOTH_THRESH:
+            loss = (gt_depth[valid] - depth[valid].clamp(min=0, max=10)).square().mean()
     return loss
+
 
 def smooth_loss(pred_map):
     def gradient(pred):
@@ -29,3 +37,7 @@ def smooth_loss(pred_map):
         loss += (dx2.abs().mean() + dxdy.abs().mean() + dydx.abs().mean() + dy2.abs().mean())*weight
         weight /= 2.3  # don't ask me why it works better
     return loss
+
+
+def weighted_loss(l1, l2, w1, w2):
+    return w1*l1 + w2*l2

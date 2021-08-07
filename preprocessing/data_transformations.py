@@ -5,7 +5,6 @@ from sklearn.model_selection import train_test_split
 from skimage.transform import resize
 import torch
 
-
 NYUD_MEAN = [0.481215, 0.41197756, 0.39314577]
 NYUD_STD = [0.28848645, 0.29521945, 0.3089535]
 

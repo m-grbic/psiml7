@@ -2,12 +2,20 @@ from PIL import Image
 import numpy as np
 from skimage.transform import resize
 import matplotlib.pyplot as plt
+from models.vgg16bn_disp import DepthNet
+import torch
 
 BORDER_SIZE = 10
 IMG_HEIGHT = 256
 IMG_WIDTH = 352
 IMG_HEIGHT_RESCALE = 284
 IMG_WIDTH_RESCALE = 392
+NYUD_MEAN = [0.481215, 0.41197756, 0.39314577]
+NYUD_STD = [0.28848645, 0.29521945, 0.3089535]
+MODEL_NAME = '2021_08_07_N08'
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+model_path = 'models/' + MODEL_NAME
 
 def rescale_img(img, output_shape=(IMG_HEIGHT_RESCALE, IMG_WIDTH_RESCALE)):
     # Rescaled images
@@ -38,7 +46,40 @@ def centerCrop(imgs):
 
     return imgs[:,:,y1:y2,x1:x2]
 
-if __name__ == '__main__':
+def visualize_sample(model, img, title, nsamples=1):
+    fig, axes = plt.subplots(nrows=nsamples, ncols=2, dpi=120)
+    ax = axes.ravel()
+
+    for r in range(nsamples):
+        # To Cuda
+        img = img.to(device).float()
+
+        with torch.no_grad():
+            # Prediction
+            disp = model(img)
+            depth = 1 / disp
+
+            # Limit values
+            depth = torch.clamp(depth, min=0, max=10)
+
+        # Conversion to numpy
+        image_numpy = torch.squeeze(denormalize(img)).swapaxes(0,1).swapaxes(1,2).to(torch.uint8).cpu().numpy()
+        depth_numpy = torch.squeeze(depth).detach().cpu().numpy()
+
+        # Visualize
+        ax[r*3+1].imshow(depth_numpy)
+        ax[r*3+1].set_axis_off()
+        ax[r*3+1].set_title('Prediction depth')
+        ax[r*3+2].imshow(image_numpy)
+        ax[r*3+2].set_axis_off()
+        ax[r*3+2].set_title('Original image')
+
+    fig.suptitle(title)
+    fig.savefig(images_dir + '/' + title + ' results.png', dpi=fig.dpi)
+    plt.tight_layout()
+    plt.show()
+
+def image_init():
     # Import image
     img = np.zeros((1, 3, IMG_HEIGHT_RESCALE, IMG_WIDTH_RESCALE))
     img = Image.open("preprocessing/sample_image.jpg")
@@ -53,6 +94,27 @@ if __name__ == '__main__':
 
     # Crop
     img = centerCrop(img)
+
+    # Normalization
+    img /= 255
+    for i in range(3):
+        img[:,i,:,:] = (img[:,i,:,:] - NYUD_MEAN[i]) / NYUD_STD[i]
+
+    return img
+
+if __name__ == '__main__':
+    # Init image
+    img = image_init()
+
+    # Load pretrained network
+    print('Loading model...')
+    model = DepthNet()
+    model.load_state_dict(torch.load(model_path))
+    model.to(device).eval()
+    print('Model loaded!')
+
+    # Visualize Sample
+    visualize_sample(model, img=img[0], 'Sample image')
 
     # plt.imshow(img[0].astype('uint8'))
     # plt.show()

@@ -10,7 +10,6 @@ NYUD_STD = [0.28848645, 0.29521945, 0.3089535]
 
 
 def get_split(path='./dataset/', split_ratio=SPLIT_RATIO, train=False):
-
     # Input data
     images = np.load(path + "images.npy")
     # Target data

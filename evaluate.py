@@ -120,7 +120,7 @@ if __name__ == '__main__':
     # Load pretrained network
     print('Loading model...')
     model = DepthNet()
-    model.load_state_dict(torch.load(model_path))
+    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
     model.to(device).eval()
     print('Model loaded!')
 

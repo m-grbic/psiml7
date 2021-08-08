@@ -245,11 +245,35 @@ def MixUp(images, depths, param=0.2, size=MIXUP_SIZE):
         ind = choice(inds)
 
         # Save augmented image
-        images[i] = img_tmp
-        depths[i] = dpt_tmp
+        images[ind] = img_tmp
+        depths[ind] = dpt_tmp
 
     return images, depths
 
+def Blend(images, depths, param=0.2, size=MIXUP_SIZE):
+    # Number of mixed images
+    ssize = int(BATCH_SIZE*size)
+
+    # Index range
+    ind_range = np.arange(start=0, stop=BATCH_SIZE, dtype='int')
+
+    for i in range(ssize):
+        # Chose two indexes
+        inds = choices(ind_range, k=2)
+
+        # Blend augmentation
+        crop_width = np.random.randint(IMG_WIDTH/5, 4*IMG_WIDTH/5)
+        img_tmp = images[inds[0], :, :, :crop_width] + images[inds[1], :, :, crop_width:]
+        dpt_tmp = depths[inds[0], :, :, :crop_width] + depths[inds[1], :, :, crop_width:]
+
+        # Randomly choose where to save image
+        ind = choice(inds)
+
+        # Save augmented image
+        images[ind] = img_tmp
+        depths[ind] = dpt_tmp
+
+    return images, depths
 
 def RandomRotate(images, depths, angle=ROTATION_ANGLE, size=ROTATION_SIZE):
 

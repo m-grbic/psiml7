@@ -18,6 +18,7 @@ MODEL_NAME = '2021_08_07_N07'
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model_path = 'models/' + MODEL_NAME
 sample_img_name = "sample_image_2.jpg"
+sample_img_name_2 = "sample_image.jpg"
 
 def rescale_img(img, output_shape=(IMG_HEIGHT_RESCALE, IMG_WIDTH_RESCALE)):
     # Rescaled images
@@ -55,6 +56,23 @@ def denormalize(img):
     # Hard limit
     img[img<0] = 0
     img[img>255] = 255
+
+    return img
+
+def MixUp(img1, img2, param=0.2):
+    # Generate sample from beta distribution
+    lmbd = np.random.beta(a=param, b=param, size=1)
+
+    # MixUp augmentation
+    img_tmp = img1*lmbd + img2*(1-lmbd)
+
+    return img_tmp
+
+def Blend(img1, img2):
+    crop_width = np.random.randint(IMG_HEIGHT/5, 4*IMG_HEIGHT/5)
+    img = np.zeros((1, 3, IMG_HEIGHT, IMG_WIDTH))
+    img[0, :, :, 0:crop_width] = img1[0, :, :, 0:crop_width]
+    img[0, :, :, crop_width:IMG_WIDTH] = img2[0, :, :, crop_width:IMG_WIDTH]
 
     return img
 
@@ -117,6 +135,8 @@ def image_init(img_name="sample_image.jpg"):
 if __name__ == '__main__':
     # Init image
     img = image_init(img_name=sample_img_name)
+    img2 = image_init(img_name=sample_img_name_2)
+    img3 = Blend(img, img2)
 
     # Load pretrained network
     print('Loading model...')
@@ -124,9 +144,11 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
     model.to(device).eval()
     print('Model loaded!')
+    visualize_sample(model, img=img3, title='Sample MixUp image')
 
     # Visualize Sample
     visualize_sample(model, img=img, title='Sample image')
+
 
     # plt.imshow(img[0].astype('uint8'))
     # plt.show()

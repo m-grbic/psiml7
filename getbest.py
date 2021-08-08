@@ -6,7 +6,7 @@ from time import time
 import torch
 from loss.loss_functions import *
 import pathlib
-from preprocessing.data_transformations import denormalize, get_split, RandomHorizontalFlip, RandomVerticalFlip
+from preprocessing.data_transformations import denormalize, get_split
 from hyperparameters import *
 
 # Device recognition
@@ -16,7 +16,7 @@ print('Available device is', device)
 # Paths
 model_path = 'models/' + MODEL_NAME
 images_dir = 'images/' + model_path.split('/')[-1]
-pathlib.Path(images_dir).mkdir(parents=True, exist_ok=True) 
+pathlib.Path(images_dir).mkdir(parents=True, exist_ok=True)
 
 # Loss weights
 w1, w2 = W1, W2
@@ -24,7 +24,7 @@ w1, w2 = W1, W2
 
 def visualize_sample(model, img, gt_depth, loss, title, nsamples=3):
 
-    fig, axes = plt.subplots(nrows=nsamples, ncols=3, dpi=120)
+    fig, axes = plt.subplots(figsize=(16,8), nrows=nsamples, ncols=3, dpi=120)
     ax = axes.ravel()
 
     for r in range(nsamples):
@@ -67,6 +67,10 @@ def visualize_sample(model, img, gt_depth, loss, title, nsamples=3):
 
 def test(model, test_set):
     global w1, w2
+
+    # Loss function dictionary
+    loss_func = {'l1' : l1_loss, 'l2' : l2_loss, 'behru' : behru_loss}
+
     # Initialize running loss
     running_loss_photo = 0
     running_loss_smooth = 0
@@ -96,7 +100,7 @@ def test(model, test_set):
             depth = 1 / disparities
             
             # Calculate loss
-            loss_1 = l1_loss(gt_depth, depth)
+            loss_1 = loss_func[LOSS](gt_depth, depth)
             loss_3 = smooth_loss(depth)
             loss = weighted_loss(loss_1, loss_3, w1, w2)
             
@@ -135,7 +139,6 @@ if __name__ == '__main__':
     train_set, val_set, test_set = get_split(train=False)
     print('Data loaded!')
     
-
     # Choosing best sample
     print('Choosing best sample in train dataset...')
     worst_img, worst_dpt, worst_loss, best_img, best_dpt, best_loss = test(model=model, test_set=train_set)

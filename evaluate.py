@@ -6,7 +6,8 @@ from time import time
 import torch
 from loss.loss_functions import *
 import pathlib
-from preprocessing.data_transformations import denormalize, get_split, RandomHorizontalFlip, RandomVerticalFlip
+from preprocessing.data_transformations import denormalize, get_split
+from hyperparameters import *
 
 # Device recognition
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -47,21 +48,6 @@ def visualize_sample(model, dataset, title, nsamples=3):
         gt_depth_numpy = torch.squeeze(gt_depth).detach().cpu().numpy()
         depth_numpy = torch.squeeze(depth).detach().cpu().numpy()
 
-        '''
-        # Depth histogram
-        gt_depth_hist = gt_depth_numpy.flatten()
-        depth_hist = depth_numpy.flatten()
-
-        
-        fig, axes = plt.subplots(ncols=2, figsize=(12,12))
-        ax = axes.ravel()
-        ax[0].hist(gt_depth_hist)
-        ax[1].hist(depth_hist)
-        ax[0].set_title('Ground truth depth histogram')
-        ax[1].set_title('Predicted depth histogram')
-        plt.show()
-        '''
-
         # Visualize
         ax[r*3].imshow(gt_depth_numpy)
         ax[r*3].set_axis_off()
@@ -76,11 +62,15 @@ def visualize_sample(model, dataset, title, nsamples=3):
     fig.suptitle(title)
     fig.savefig(images_dir + '/' + title + ' results.png', dpi=fig.dpi)
     plt.tight_layout()
-    plt.show()
+    #plt.show()
 
 
 def test(model, test_set):
     global w1, w2
+
+    # Loss function dictionary
+    loss_func = {'l1' : l1_loss, 'l2' : l2_loss, 'behru' : behru_loss}
+
     # Initialize running loss
     running_loss_photo = 0
     running_loss_smooth = 0
@@ -107,7 +97,7 @@ def test(model, test_set):
             depth = 1 / disparities
             
             # Calculate loss
-            loss_1 = l1_loss(gt_depth, depth)
+            loss_1 = loss_func[LOSS](gt_depth, depth)
             loss_3 = smooth_loss(depth)
             loss = weighted_loss(loss_1, loss_3, w1, w2)
             
@@ -138,13 +128,11 @@ if __name__ == '__main__':
     print('Loading data...')
     train_set, val_set, test_set = get_split(train=False)
     print('Data loaded!')
-    
 
     # Test model
     print('Testing a model...')
     test(model=model, test_set=test_set)
     print('Testing finished!')
-    
 
     # Visualization of results
     visualize_sample(model, train_set, 'Training dataset')

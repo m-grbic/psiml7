@@ -38,19 +38,16 @@ def visualize_sample(model, img, gt_depth, loss, title, nsamples=3):
             disp = model(img)
             depth = 1 / disp
 
-            # Limit values
-            depth = torch.clamp(depth, min=1e-3, max=10)
-
         # Conversion to numpy
         image_numpy = torch.squeeze(denormalize(img)).swapaxes(0,1).swapaxes(1,2).to(torch.uint8).cpu().numpy()
         gt_depth_numpy = torch.squeeze(gt_depth).detach().cpu().numpy()
         depth_numpy = torch.squeeze(depth).detach().cpu().numpy()
 
         # Visualize
-        ax[r*3].imshow(gt_depth_numpy, vmin=0, vmax=10, cmap='gray')
+        ax[r*3].imshow(gt_depth_numpy)
         ax[r*3].set_axis_off()
         ax[r*3].set_title('Ground truth depth')
-        ax[r*3+1].imshow(depth_numpy, vmin=0, vmax=10, cmap='gray')
+        ax[r*3+1].imshow(depth_numpy)
         ax[r*3+1].set_axis_off()
         ax[r*3+1].set_title('Prediction depth')
         ax[r*3+2].imshow(image_numpy)
@@ -95,6 +92,7 @@ def test(model, test_set, title):
         with torch.no_grad():
             # Prediction
             disparities = model(tgt_img)
+
             depth = 1 / disparities
             
             # Calculate loss
@@ -113,6 +111,7 @@ def test(model, test_set, title):
                 worst_img, worst_dpt, worst_loss = tgt_img, gt_depth, loss.item()
 
             torch.cuda.empty_cache()
+
 
     # Print results on training dataset
     print('------------------------------------------------')

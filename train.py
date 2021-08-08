@@ -76,7 +76,7 @@ def train(batch_size, epochs):
     model = DepthNet().to(device)
 
     # Optimizer setup
-    optimizer = Adam(model.parameters(), lr=lr, betas=(0.9, 0.999)) # ,weight_decay=0.1
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.999)) # ,weight_decay=0.1
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=step, gamma=gamma, verbose = True)
 
     print('Training...')

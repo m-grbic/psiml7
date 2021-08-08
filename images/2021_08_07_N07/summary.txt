@@ -4,5 +4,5 @@ batch size : 64
 Weighted loss : 1 0.001
 LRScheduler (gamma, step) : 1 10000
 L1 smooth : True
-Rescaled image : 226, 158
+Rescaled image : 126, 158
 Cropped image : 96, 128

@@ -5,6 +5,7 @@ from scipy import ndimage
 from sklearn.model_selection import train_test_split
 from skimage.transform import resize
 import torch
+import matplotlib.pyplot as plt
 
 NYUD_MEAN = [0.481215, 0.41197756, 0.39314577]
 NYUD_STD = [0.28848645, 0.29521945, 0.3089535]
@@ -149,6 +150,8 @@ class DataSet():
                 imgs, dpts = RandomRotate(imgs, dpts)
             if MIXUP:
                 imgs, dpts = MixUp(imgs, dpts, size=MIXUP_SIZE)
+            if BLEND:
+                imgs, dpts = Blend(imgs, dpts, size=BLEND_SIZE)
         else:
             imgs, dpts = self.centerCrop(imgs, dpts)
 
@@ -250,7 +253,8 @@ def MixUp(images, depths, param=0.2, size=MIXUP_SIZE):
 
     return images, depths
 
-def Blend(images, depths, param=0.2, size=MIXUP_SIZE):
+
+def Blend(images, depths, size=BLEND_SIZE):
     # Number of mixed images
     ssize = int(BATCH_SIZE*size)
 
@@ -263,8 +267,8 @@ def Blend(images, depths, param=0.2, size=MIXUP_SIZE):
 
         # Blend augmentation
         crop_width = np.random.randint(IMG_WIDTH/5, 4*IMG_WIDTH/5)
-        img_tmp = images[inds[0], :, :, :crop_width] + images[inds[1], :, :, crop_width:]
-        dpt_tmp = depths[inds[0], :, :, :crop_width] + depths[inds[1], :, :, crop_width:]
+        img_tmp = np.concatenate((images[inds[0], :, :, :crop_width], images[inds[1], :, :, crop_width:]), axis=2)
+        dpt_tmp = np.concatenate((depths[inds[0], :, :, :crop_width], depths[inds[1], :, :, crop_width:]), axis=2)
 
         # Randomly choose where to save image
         ind = choice(inds)
@@ -274,6 +278,7 @@ def Blend(images, depths, param=0.2, size=MIXUP_SIZE):
         depths[ind] = dpt_tmp
 
     return images, depths
+
 
 def RandomRotate(images, depths, angle=ROTATION_ANGLE, size=ROTATION_SIZE):
 

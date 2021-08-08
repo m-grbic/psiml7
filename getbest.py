@@ -47,10 +47,10 @@ def visualize_sample(model, img, gt_depth, loss, title, nsamples=3):
         depth_numpy = torch.squeeze(depth).detach().cpu().numpy()
 
         # Visualize
-        ax[r*3].imshow(gt_depth_numpy)
+        ax[r*3].imshow(gt_depth_numpy, vmin=0, vmax=10, cmap='gray')
         ax[r*3].set_axis_off()
         ax[r*3].set_title('Ground truth depth')
-        ax[r*3+1].imshow(depth_numpy)
+        ax[r*3+1].imshow(depth_numpy, vmin=0, vmax=10, cmap='gray')
         ax[r*3+1].set_axis_off()
         ax[r*3+1].set_title('Prediction depth')
         ax[r*3+2].imshow(image_numpy)
@@ -62,10 +62,8 @@ def visualize_sample(model, img, gt_depth, loss, title, nsamples=3):
     plt.tight_layout()
     #plt.show()
 
-    print("loss = ", loss.item())
 
-
-def test(model, test_set):
+def test(model, test_set, title):
     global w1, w2
 
     # Loss function dictionary
@@ -85,7 +83,7 @@ def test(model, test_set):
 
     for itr in range(N_test):
         # Verbose
-        print('Iteration %d/%d' %(itr+1, N_test))
+        # print('Iteration %d/%d' %(itr+1, N_test))
 
         # Get images and depths
         tgt_img, gt_depth = test_set.getSample(num=itr)
@@ -109,16 +107,16 @@ def test(model, test_set):
             running_loss_smooth += loss_3.item() / N_test
             running_loss += loss.item() / N_test
 
-            if best_loss == None or best_loss > loss:
-                best_img, best_dpt, best_loss = tgt_img, gt_depth, loss
-            if worst_loss == None or worst_loss < loss:
-                worst_img, worst_dpt, worst_loss = tgt_img, gt_depth, loss
+            if best_loss == None or best_loss > loss.item():
+                best_img, best_dpt, best_loss = tgt_img, gt_depth, loss.item()
+            if worst_loss == None or worst_loss < loss.item():
+                worst_img, worst_dpt, worst_loss = tgt_img, gt_depth, loss.item()
 
             torch.cuda.empty_cache()
 
     # Print results on training dataset
     print('------------------------------------------------')
-    print('################ Test results ##################')
+    print('################ ' + title + ' results ##################')
     print('Photometric loss {:.4f}, Smooth loss {:.4f}, Overall loss {:.4f}'.format(running_loss_photo, running_loss_smooth, running_loss))
     print('------------------------------------------------')
 
@@ -141,16 +139,16 @@ if __name__ == '__main__':
     
     # Choosing best sample
     print('Choosing best sample in train dataset...')
-    worst_img, worst_dpt, worst_loss, best_img, best_dpt, best_loss = test(model=model, test_set=train_set)
+    worst_img, worst_dpt, worst_loss, best_img, best_dpt, best_loss = test(model=model, test_set=train_set, title="Training")
     visualize_sample(model, best_img, best_dpt, best_loss, 'Best training dataset', nsamples=1)
     visualize_sample(model, worst_img, worst_dpt, worst_loss, 'Worst training dataset', nsamples=1)
 
     print('Choosing best sample in validation dataset...')
-    worst_img, worst_dpt, worst_loss, best_img, best_dpt, best_loss = test(model=model, test_set=val_set)
+    worst_img, worst_dpt, worst_loss, best_img, best_dpt, best_loss = test(model=model, test_set=val_set, title="Validation")
     visualize_sample(model, best_img, best_dpt, best_loss, 'Best validation dataset', nsamples=1)
     visualize_sample(model, worst_img, worst_dpt, worst_loss, 'Worst validation dataset', nsamples=1)
 
     print('Choosing best sample in test dataset...')
-    worst_img, worst_dpt, worst_loss, best_img, best_dpt, best_loss = test(model=model, test_set=test_set)
+    worst_img, worst_dpt, worst_loss, best_img, best_dpt, best_loss = test(model=model, test_set=test_set, title="Test")
     visualize_sample(model, best_img, best_dpt, best_loss, 'Best test dataset', nsamples=1)
     visualize_sample(model, worst_img, worst_dpt, worst_loss, 'Worst test dataset', nsamples=1)

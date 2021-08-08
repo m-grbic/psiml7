@@ -48,6 +48,8 @@ def summary_writter():
             "\nBorder size : " + str(BORDER_SIZE) + \
             "\nMixUp : " + str(MIXUP) + \
             "\nMixUp ratio : " + str(MIXUP_SIZE) + \
+            "\nBlend : " + str(BLEND) + \
+            "\nBlend ratio : " + str(BLEND_SIZE) + \
             "\nRotation : " + str(ROTATE) + \
             "\nRotation angle : " + str(ROTATION_ANGLE) + \
             "\nRotation ratio : " + str(ROTATION_SIZE) + \
@@ -199,12 +201,12 @@ def train(batch_size, epochs):
         validation_loss.append(running_loss)
 
         # Saving the best model
-        if (best_loss == None) or (loss.item() < best_loss):
+        if (best_loss == None) or (validation_loss[-1] < best_loss):
             # Get best loss
-            best_loss = loss.item()
+            best_loss = validation_loss[-1]
             # Write in log file
             log_file = open(images_dir + "/best_validation loss.txt","w")
-            log_file.write("loss : " + str(round(best_loss,4)) + "\nepoch " + str(epoch))
+            log_file.write("loss : " + str(round(best_loss,4)) + "\nepoch " + str(epoch+1))
             log_file.close()
             # Save best model
             torch.save(model.state_dict(), model_path)
@@ -230,6 +232,8 @@ if __name__ == '__main__':
 
     summary_writter()
 
+    start = time.time()
+
     try:
 
         loss = train(batch_size=batch_size, epochs=EPOCHS)
@@ -241,7 +245,7 @@ if __name__ == '__main__':
         plt.title('Loss function')
         plt.grid(b=True, which='minor')
         fig.savefig(images_dir + '/learning_curve.png', dpi=fig.dpi)
-        plt.show()
+        # plt.show()
         
     
     except KeyboardInterrupt:
@@ -253,4 +257,7 @@ if __name__ == '__main__':
         plt.title('Loss function')
         plt.grid(b=True, which='minor')
         fig.savefig(images_dir + '/learning_curve.png', dpi=fig.dpi)
-        plt.show()
+        # plt.show()
+
+    end = time.time()
+    print('Training time {}s'.format(end-start))

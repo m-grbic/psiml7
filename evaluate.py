@@ -49,10 +49,10 @@ def visualize_sample(model, dataset, title, nsamples=3):
         depth_numpy = torch.squeeze(depth).detach().cpu().numpy()
 
         # Visualize
-        ax[r*3].imshow(gt_depth_numpy)
+        ax[r*3].imshow(gt_depth_numpy, vmin=0, vmax=10, cmap='gray')
         ax[r*3].set_axis_off()
         ax[r*3].set_title('Ground truth depth')
-        ax[r*3+1].imshow(depth_numpy)
+        ax[r*3+1].imshow(depth_numpy, vmin=0, vmax=10, cmap='gray')
         ax[r*3+1].set_axis_off()
         ax[r*3+1].set_title('Prediction depth')
         ax[r*3+2].imshow(image_numpy)
@@ -76,6 +76,9 @@ def test(model, test_set):
     running_loss_smooth = 0
     running_loss = 0
 
+    # Calculate forward mean time
+    mean_time = 0
+
     # Evaluation on test dataset
     N_test = test_set.initBatch(batch_size=1)
 
@@ -93,7 +96,10 @@ def test(model, test_set):
 
         with torch.no_grad():
             # Prediction
+            start = time()
             disparities = model(tgt_img)
+            end = time()
+            mean_time += (end-start) / BATCH_SIZE
             depth = 1 / disparities
             
             # Calculate loss
@@ -108,10 +114,13 @@ def test(model, test_set):
 
             torch.cuda.empty_cache()
 
+    mean_time /= N_test
+
     # Print results on training dataset
     print('------------------------------------------------')
     print('################ Test results ##################')
     print('Photometric loss {:.4f}, Smooth loss {:.4f}, Overall loss {:.4f}'.format(running_loss_photo, running_loss_smooth, running_loss))
+    print('Average inference time: {:.4f}'.format(mean_time))
     print('------------------------------------------------')
 
     

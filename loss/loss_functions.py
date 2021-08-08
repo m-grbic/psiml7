@@ -3,6 +3,7 @@ import warnings
 warnings.filterwarnings('ignore', '.*output shape of zoom.*')
 from time import time
 from hyperparameters import SMOOTH_L1, SMOOTH_THRESH
+import torch
 
 
 def l1_loss(gt_depth, depth):
@@ -10,10 +11,34 @@ def l1_loss(gt_depth, depth):
     valid = (gt_depth > 0) & (gt_depth < 10)
     # L1 loss
     loss = (gt_depth[valid] - depth[valid].clamp(min=0, max=10)).abs().mean()
-    # L2 loss
+    # Smooth L1
     if SMOOTH_L1:
         if loss < SMOOTH_THRESH:
             loss = (gt_depth[valid] - depth[valid].clamp(min=0, max=10)).square().mean()
+    return loss
+
+
+def l2_loss(gt_depth, depth):
+    # Valid depth
+    valid = (gt_depth > 0) & (gt_depth < 10)
+    # L2 loss
+    loss = (gt_depth[valid] - depth[valid].clamp(min=0, max=10)).square().mean()
+    return loss
+
+
+def behru_loss(gt_depth, depth):
+
+    valid = (gt_depth > 0) & (gt_depth < 10)        
+    valid_gt = gt_depth[valid]
+    valid_pred = depth[valid].clamp(1e-3, 10)
+
+    residual = (valid_gt-valid_pred).abs()
+    max_res = residual.max()
+    condition = 0.2*max_res
+    l2 = ((residual**2+condition**2)/(2*condition))
+    l1 = residual
+    loss = torch.where(residual > condition, l2, l1).mean()
+
     return loss
 
 

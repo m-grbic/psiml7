@@ -1,6 +1,7 @@
 from hyperparameters import *
 import numpy as np
-from random import randint, random, sample
+from random import randint, random, choice, choices, uniform
+from scipy import ndimage
 from sklearn.model_selection import train_test_split
 from skimage.transform import resize
 import torch
@@ -142,13 +143,27 @@ class DataSet():
         # If data is used for training then random crop is used insted of rescale method
         if self.train:
             imgs, dpts = self.randomCrop(imgs, dpts)
-            imgs, dpts = RandomHorizontalFlip(imgs,dpts)
-            imgs, dpts = RandomVerticalFlip(imgs,dpts)
+            imgs, dpts = RandomHorizontalFlip(imgs, dpts)
+            imgs, dpts = RandomVerticalFlip(imgs, dpts)
+            if ROTATE:
+                imgs, dpts = RandomRotate(imgs, dpts)
+            if MIXUP:
+                imgs, dpts = MixUp(imgs, dpts, size=MIXUP_SIZE)
         else:
             imgs, dpts = self.centerCrop(imgs, dpts)
 
         # Increment iterator
         self.itr += 1
+
+        '''
+        !MOJ PREDLOG!
+        plt.figure()
+        plt.imshow(np.swapaxes(np.swapaxes(imgs[0],0,1),1,2))
+        plt.show()
+        plt.figure()
+        plt.imshow(dpts[0])
+        plt.show()
+        '''
 
         # Tensor conversion
         tensor_images = torch.from_numpy(imgs).float()
@@ -162,13 +177,13 @@ class DataSet():
         if num == None:
             num = randint(0, self.N-1)
 
-        image, depth = self.images[num], self.depths[num]
+        image, depth = self.images[num].reshape((1, self.C, self.H, self.W)), self.depths[num].reshape((1, 1, self.H, self.W))
 
         image, depth = self.centerCrop(image, depth)
 
         # Get sample
-        sample_img = torch.from_numpy(image).float().view(1,self.C, self.H, self.W)
-        sample_dpt = torch.from_numpy(depth).float().view(1,1, self.H, self.W)
+        sample_img = torch.from_numpy(image).float().view(1, self.C, IMG_HEIGHT, IMG_WIDTH)
+        sample_dpt = torch.from_numpy(depth).float().view(1, 1, IMG_HEIGHT, IMG_WIDTH)
 
         return sample_img, sample_dpt
 
@@ -207,3 +222,45 @@ def denormalize(image):
 
     return image
 
+
+def MixUp(images, depths, param=0.2, size=MIXUP_SIZE):
+    # Number of mixed images
+    ssize = int(BATCH_SIZE*size)
+
+    # Index range
+    ind_range = np.arange(start=0, stop=BATCH_SIZE, dtype='int')
+
+    for i in range(ssize):
+        # Chose two indexes
+        inds = choices(ind_range, k=2)
+
+        # Generate sample from beta distribution
+        lmbd = np.random.beta(a=param, b=param, size=1)
+
+        # MixUp augmentation
+        img_tmp = images[inds[0]]*lmbd + images[inds[1]]*(1-lmbd)
+        dpt_tmp = depths[inds[0]]*lmbd + depths[inds[1]]*(1-lmbd)
+
+        # Randomly choose where to save image
+        ind = choice(inds)
+
+        # Save augmented image
+        images[i] = img_tmp
+        depths[i] = dpt_tmp
+
+    return images, depths
+
+
+def RandomRotate(images, depths, angle=ROTATION_ANGLE, size=ROTATION_SIZE):
+
+    # Index range
+    ind_range = np.arange(start=0, stop=BATCH_SIZE, dtype='int')
+
+    # Select images to be rotated
+    inds = choices(ind_range, k=int(size*BATCH_SIZE))
+
+    for ind in inds:
+        images[ind] = ndimage.rotate(images[ind], angle=uniform(-angle, angle), reshape=False, axes=(2,1), mode='mirror')
+        depths[ind] = ndimage.rotate(depths[ind], angle=uniform(-angle, angle), reshape=False, axes=(2,1), mode='mirror')
+
+    return images, depths

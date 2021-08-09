@@ -12,7 +12,7 @@ NYUD_STD = [0.28848645, 0.29521945, 0.3089535]
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model_path = 'models/' + MODEL_NAME
-sample_img_name = "sample_image.jpeg"
+sample_img_name = "sample_image_2.jpg"
 
 
 def rescale_img(img, output_shape=(IMG_HEIGHT_RESCALE, IMG_WIDTH_RESCALE)):

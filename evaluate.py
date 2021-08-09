@@ -50,11 +50,11 @@ def visualize_sample(model, dataset, title, nsamples=3):
 
         # Visualize
         vmin = 0.1
-        vmax = 10
-        ax[r*3].imshow(gt_depth_numpy, vmin=vmin, vmax=vmax)
+        vmax = 7
+        ax[r*3].imshow(gt_depth_numpy, vmin=vmin, vmax=vmax, cmap='gray')
         ax[r*3].set_axis_off()
         ax[r*3].set_title('Ground truth depth')
-        ax[r*3+1].imshow(depth_numpy, vmin=vmin, vmax=vmax)
+        ax[r*3+1].imshow(depth_numpy, vmin=vmin, vmax=vmax, cmap='gray')
         ax[r*3+1].set_axis_off()
         ax[r*3+1].set_title('Prediction depth')
         ax[r*3+2].imshow(image_numpy)

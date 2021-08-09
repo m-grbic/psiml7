@@ -26,6 +26,10 @@ def l2_loss(gt_depth, depth):
     return loss
 
 
+def RMSE(gt_depth, depth):
+    return torch.sqrt(l2_loss(gt_depth, depth)).item()
+
+
 def behru_loss(gt_depth, depth):
 
     valid = (gt_depth > 0) & (gt_depth < 10)        

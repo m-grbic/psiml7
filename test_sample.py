@@ -5,20 +5,15 @@ from skimage.transform import resize
 import matplotlib.pyplot as plt
 from models.vgg16bn_disp import DepthNet
 import torch
+from hyperparameters import *
 
-BORDER_SIZE = 10
-IMG_HEIGHT = 96
-IMG_WIDTH = 128
-IMG_HEIGHT_RESCALE = 128
-IMG_WIDTH_RESCALE = 150
 NYUD_MEAN = [0.481215, 0.41197756, 0.39314577]
 NYUD_STD = [0.28848645, 0.29521945, 0.3089535]
-MODEL_NAME = '2021_08_07_N07'
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model_path = 'models/' + MODEL_NAME
-sample_img_name = "sample_image_2.jpg"
-sample_img_name_2 = "sample_image.jpg"
+sample_img_name = "sample_image.jpeg"
+
 
 def rescale_img(img, output_shape=(IMG_HEIGHT_RESCALE, IMG_WIDTH_RESCALE)):
     # Rescaled images
@@ -40,6 +35,7 @@ def rescale_img(img, output_shape=(IMG_HEIGHT_RESCALE, IMG_WIDTH_RESCALE)):
     # Save images
     return images_rescaled
 
+
 def centerCrop(imgs):
 
     y1 = int( (IMG_HEIGHT_RESCALE - IMG_HEIGHT) // 2 )
@@ -48,6 +44,7 @@ def centerCrop(imgs):
     x2 = int( IMG_WIDTH_RESCALE - (IMG_WIDTH_RESCALE - IMG_WIDTH) // 2 )
 
     return imgs[:,:,y1:y2,x1:x2]
+
 
 def denormalize(img):
     for i in range(3):
@@ -59,31 +56,16 @@ def denormalize(img):
 
     return img
 
-def MixUp(img1, img2, param=0.2):
-    # Generate sample from beta distribution
-    lmbd = np.random.beta(a=param, b=param, size=1)
-
-    # MixUp augmentation
-    img_tmp = img1*lmbd + img2*(1-lmbd)
-
-    return img_tmp
-
-def Blend(img1, img2):
-    crop_width = np.random.randint(IMG_HEIGHT/5, 4*IMG_HEIGHT/5)
-    img = np.zeros((1, 3, IMG_HEIGHT, IMG_WIDTH))
-    img[0, :, :, 0:crop_width] = img1[0, :, :, 0:crop_width]
-    img[0, :, :, crop_width:IMG_WIDTH] = img2[0, :, :, crop_width:IMG_WIDTH]
-
-    return img
 
 def visualize_sample(model, img, title, nsamples=1):
+
     fig, axes = plt.subplots(nrows=nsamples, ncols=2, dpi=120)
     ax = axes.ravel()
 
     img = torch.from_numpy(img).float()
     for r in range(nsamples):
         # To Cuda
-        # img = img.to(device).float()
+        img = img.to(device).float()
 
         with torch.no_grad():
             # Prediction
@@ -91,7 +73,7 @@ def visualize_sample(model, img, title, nsamples=1):
             depth = 1 / disp
 
             # Limit values
-            depth = torch.clamp(depth, min=0, max=10)
+            depth = torch.clamp(depth, min=0.1, max=10)
 
         # Conversion to numpy
         image_numpy = torch.squeeze(denormalize(img)).swapaxes(0,1).swapaxes(1,2).to(torch.uint8).cpu().numpy()
@@ -100,7 +82,7 @@ def visualize_sample(model, img, title, nsamples=1):
         # Visualize
         ax[r*2].imshow(depth_numpy)
         ax[r*2].set_axis_off()
-        ax[r*2].set_title('Prediction depth')
+        ax[r*2].set_title('Depth prediction')
         ax[r*2+1].imshow(image_numpy)
         ax[r*2+1].set_axis_off()
         ax[r*2+1].set_title('Original image')
@@ -108,6 +90,7 @@ def visualize_sample(model, img, title, nsamples=1):
     fig.suptitle(title)
     plt.tight_layout()
     plt.show()
+
 
 def image_init(img_name="sample_image.jpg"):
     # Import image
@@ -132,11 +115,10 @@ def image_init(img_name="sample_image.jpg"):
 
     return img
 
+
 if __name__ == '__main__':
     # Init image
     img = image_init(img_name=sample_img_name)
-    img2 = image_init(img_name=sample_img_name_2)
-    img3 = Blend(img, img2)
 
     # Load pretrained network
     print('Loading model...')
@@ -144,11 +126,7 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
     model.to(device).eval()
     print('Model loaded!')
-    visualize_sample(model, img=img3, title='Sample MixUp image')
 
     # Visualize Sample
     visualize_sample(model, img=img, title='Sample image')
 
-
-    # plt.imshow(img[0].astype('uint8'))
-    # plt.show()

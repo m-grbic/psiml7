@@ -267,15 +267,17 @@ def Blend(images, depths, size=BLEND_SIZE):
 
         # Blend augmentation
         crop_width = np.random.randint(IMG_WIDTH/5, 4*IMG_WIDTH/5)
-        img_tmp = np.concatenate((images[inds[0], :, :, :crop_width], images[inds[1], :, :, crop_width:]), axis=2)
-        dpt_tmp = np.concatenate((depths[inds[0], :, :, :crop_width], depths[inds[1], :, :, crop_width:]), axis=2)
-
-        # Randomly choose where to save image
-        ind = choice(inds)
+        img_tmp1 = np.concatenate((images[inds[0], :, :, :crop_width], images[inds[1], :, :, crop_width:]), axis=2)
+        dpt_tmp1 = np.concatenate((depths[inds[0], :, :, :crop_width], depths[inds[1], :, :, crop_width:]), axis=2)
+        img_tmp2 = np.concatenate((images[inds[0], :, :, crop_width:], images[inds[1], :, :, :crop_width]), axis=2)
+        dpt_tmp2 = np.concatenate((depths[inds[0], :, :, crop_width:], depths[inds[1], :, :, :crop_width]), axis=2)
 
         # Save augmented image
-        images[ind] = img_tmp
-        depths[ind] = dpt_tmp
+        images[inds[0]] = img_tmp1
+        depths[inds[0]] = dpt_tmp1
+        images[inds[1]] = img_tmp2
+        depths[inds[1]] = dpt_tmp2
+
 
     return images, depths
 

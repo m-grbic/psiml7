@@ -49,10 +49,12 @@ def visualize_sample(model, dataset, title, nsamples=3):
         depth_numpy = torch.squeeze(depth).detach().cpu().numpy()
 
         # Visualize
-        ax[r*3].imshow(gt_depth_numpy)
+        vmin = 0.1
+        vmax = 10
+        ax[r*3].imshow(gt_depth_numpy, vmin=vmin, vmax=vmax)
         ax[r*3].set_axis_off()
         ax[r*3].set_title('Ground truth depth')
-        ax[r*3+1].imshow(depth_numpy)
+        ax[r*3+1].imshow(depth_numpy, vmin=vmin, vmax=vmax)
         ax[r*3+1].set_axis_off()
         ax[r*3+1].set_title('Prediction depth')
         ax[r*3+2].imshow(image_numpy)

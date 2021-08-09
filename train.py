@@ -1,14 +1,11 @@
-from copy import deepcopy
 import matplotlib.pyplot as plt
-from numpy import float32
 from models.vgg16bn_disp import DepthNet
-from time import time
-import torch
-from torch.optim import Adam
+from numpy import float32
 from loss.loss_functions import *
+import time
+import torch
 import pathlib
 from preprocessing.data_transformations import get_split
-import time
 
 # Device setup/recognition
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -30,6 +27,7 @@ validation_loss = []
 model_path = 'models/' + MODEL_NAME
 images_dir = 'images/' + model_path.split('/')[-1]
 pathlib.Path(images_dir).mkdir(parents=True, exist_ok=True) 
+
 
 # Summary writer function
 def summary_writter():
@@ -76,13 +74,12 @@ def train(batch_size, epochs):
     model = DepthNet().to(device)
 
     # Optimizer setup
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.999)) # ,weight_decay=0.1
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.999))
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=step, gamma=gamma, verbose = True)
 
     print('Training...')
 
     best_loss = None
-    best_model = None
 
     training_loss = []
     validation_loss = []

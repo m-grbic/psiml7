@@ -129,4 +129,3 @@ if __name__ == '__main__':
 
     # Visualize Sample
     visualize_sample(model, img=img, title='Sample image')
-

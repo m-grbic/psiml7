@@ -40,11 +40,11 @@ def visualize_sample(img, gt_depth, depth, loss, title):
     # Real range
     vmin = 0.1
     vmax = 10
-    ax[0].imshow(gt_depth_numpy, vmin=vmin, vmax=vmax, cmap='gray')
+    ax[0].imshow(gt_depth_numpy)
     ax[0].set_axis_off()
     ax[0].set_title('Ground truth depth')
     ax[0].set_ylabel('Black = 0.1m / White = 10m')
-    ax[1].imshow(depth_numpy, vmin=vmin, vmax=vmax, cmap='gray')
+    ax[1].imshow(depth_numpy)
     ax[1].set_axis_off()
     ax[1].set_title('Prediction depth')
     ax[2].imshow(image_numpy)
